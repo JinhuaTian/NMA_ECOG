@@ -9,6 +9,8 @@ Created on Sat Jul 10 15:02:39 2021
 from matplotlib import pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA
+
+
 fname = '/nfs/a2/userhome/tianjinhua/workingdir/nma/faceshouses.npz'
 # Load data
 alldat = np.load(fname, allow_pickle=True)['dat']
@@ -19,6 +21,17 @@ dat1 = alldat[1][0] # passive view task
 
 # reorganize data: based on its current and last labels 
 V = dat1['V'].astype('float32')
+
+from scipy import signal
+singalTransfer = True
+# transfer raw data to boardband signal
+if singalTransfer == True:
+    b, a = signal.butter(3, [50], btype = 'high', fs=1000)
+    V = signal.filtfilt(b,a,V,0)
+    V = np.abs(V)**2
+    b, a = signal.butter(3, [10], btype = 'low', fs=1000)
+    V = signal.filtfilt(b,a,V,0)
+    V = V/V.mean(0)
 
 nt, nchan = V.shape
 nstim = len(dat1['t_on'])
@@ -46,7 +59,7 @@ for i in range(newLabel.shape[0]):
         labelNum[i] = labelNum[i] + (2**n)*newLabel[i,n]
 
 # count data labe and related sample number
-countlabel = False # 12~21
+countlabel = True # 12~21
 if countlabel == True:        
     from collections import Counter
     print(Counter(labelNum))
@@ -125,7 +138,7 @@ for t in range(nTime): # notice that decoding start windowLength
     print('Time point {} finished in {:.0f}m {:.0f}s'.format(t, time_elapsed // 60, time_elapsed % 60)) # + 'repeat '+ str(re)
 
 # save neural RDM 
-np.save("/nfs/a2/userhome/tianjinhua/workingdir/nma/ECOGRDM2x100_subj1.npy",accs)
+np.save("/nfs/a2/userhome/tianjinhua/workingdir/nma/ECOGRDM2x100BD_subj1.npy",accs)
 
 partialAvgAcc = np.average(accs, axis=(1, 2, 3))
 import matplotlib.pyplot as plt

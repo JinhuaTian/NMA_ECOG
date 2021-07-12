@@ -26,6 +26,17 @@ dat1 = alldat[1][0] # passive view task
 # reorganize data: based on its current and last labels 
 V = dat1['V'].astype('float32')
 
+from scipy import signal
+singalTransfer = True
+# transfer raw data to boardband signal
+if singalTransfer == True:
+    b, a = signal.butter(3, [50], btype = 'high', fs=1000)
+    V = signal.filtfilt(b,a,V,0)
+    V = np.abs(V)**2
+    b, a = signal.butter(3, [10], btype = 'low', fs=1000)
+    V = signal.filtfilt(b,a,V,0)
+    V = V/V.mean(0)
+
 nt, nchan = V.shape
 nstim = len(dat1['t_on'])
 
@@ -41,6 +52,7 @@ windowLength = 3
 newLabel = np.zeros((dat1['stim_id'].shape[0]-windowLength,windowLength+1),dtype=int)
 labelNum = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
 novelLevel = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
+adaptLevel = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
 
 index = 0
 for i in range(windowLength,dat1['stim_id'].shape[0]):
@@ -83,7 +95,7 @@ avgV_epochs = avgV_epochs.reshape(nSample,nTime, nChan)
 rMatrix = np.zeros([len(picks),nTime,2])
 # run GLM or linear regression
 # coef: newLabel[0,:], novelLevel
-method = 'GLM'
+method = 'LR'
 pickNum = 0
 for pick in picks:
     pickEpochs = avgV_epochs[:,:,pick]
