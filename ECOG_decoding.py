@@ -46,19 +46,7 @@ for i in range(windowLength,dat1['stim_id'].shape[0]):
     tmpLabel = dat1['stim_id'][(i-windowLength):i+1] 
     newLabel[index] = tmpLabel[::-1] # invert the label number
     index = index + 1
-'''
-for i in range(newLabel.shape[0]):
-    for n in range(newLabel.shape[1]):
-        labelNum[i] = labelNum[i] + (2**n)*newLabel[i,n]
-    if newLabel[i,0] != newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] == newLabel[i,3]:
-        novelLevel[i] = 3
-    elif newLabel[i,0] != newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] != newLabel[i,3]:
-        novelLevel[i] = 2
-    elif newLabel[i,0] != newLabel[i,1] and newLabel[i,1] != newLabel[i,2]:
-        novelLevel[i] = 1
-    elif newLabel[i,0] == newLabel[i,1]:
-        novelLevel[i] = 0    
-'''
+
 for i in range(newLabel.shape[0]):
     for n in range(newLabel.shape[1]):
         labelNum[i] = labelNum[i] + (2**n)*newLabel[i,n]
