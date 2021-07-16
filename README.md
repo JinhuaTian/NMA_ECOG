@@ -1,5 +1,5 @@
-## NMA_EOCG
-## scripts for NMA project
+# NMA_EOCG
+# scripts for NMA project
 #1. univariant method: linear regression
   1.	ECOG_GLM.py for calculating linear regression and GLM.
 #2. multivariant method: RSA
