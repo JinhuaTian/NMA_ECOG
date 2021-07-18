@@ -39,6 +39,7 @@ windowLength = 3
 newLabel = np.zeros((dat1['stim_id'].shape[0]-windowLength,windowLength+1),dtype=int)
 labelNum = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
 novelLevel = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
+adaptLevel = np.zeros(dat1['stim_id'].shape[0]-windowLength,dtype=int)
 
 index = 0
 for i in range(windowLength,dat1['stim_id'].shape[0]):
@@ -51,16 +52,27 @@ for i in range(newLabel.shape[0]):
         labelNum[i] = labelNum[i] + (2**n)*newLabel[i,n]
     if newLabel[i,0] != newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] == newLabel[i,3]:
         novelLevel[i] = 3
+        adaptLevel[i] = 0
     elif newLabel[i,0] != newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] != newLabel[i,3]:
         novelLevel[i] = 2
+        adaptLevel[i] = 0
     elif newLabel[i,0] != newLabel[i,1] and newLabel[i,1] != newLabel[i,2]:
         novelLevel[i] = 1
-    elif newLabel[i,0] == newLabel[i,1]:
-        novelLevel[i] = 0    
+        adaptLevel[i] = 0
+    elif newLabel[i,0] == newLabel[i,1] and newLabel[i,1] != newLabel[i,2] :
+        novelLevel[i] = 0
+        adaptLevel[i] = 1
+    elif newLabel[i,0] == newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] != newLabel[i,3]:
+        adaptLevel[i] = 2
+        novelLevel[i] = 0
+    elif newLabel[i,0] == newLabel[i,1] and newLabel[i,1] == newLabel[i,2] and newLabel[i,2] == newLabel[i,3]:
+        adaptLevel[i] = 3
+        novelLevel[i] = 0
 
 # make correlation matrix
 index = 0
 stimRDM = []
+novelRDM = []
 adaptRDM = []
 
 # compute model RDM
@@ -69,7 +81,9 @@ for x in range(labelNum[0]):
         if x != y and x + y < labelNum[0]: #x + y < 80:
             # novelRDM
             novelDiff = abs(novelLevel[x]-novelLevel[y])
-            adaptRDM.append(novelDiff)
+            novelRDM.append(novelDiff)
+            adaptDiff = abs(adaptLevel[x]-adaptLevel[y])
+            adaptRDM.append(adaptDiff)
             if newLabel[x,0] == newLabel[y,1]:
                 stimRDM.append(1)
             else:
@@ -91,6 +105,8 @@ RDMcorrStim = np.zeros(nTime)
 RDMpStim = np.zeros(nTime)
 RDMcorrAdapt = np.zeros(nTime)
 RDMpAdapt = np.zeros(nTime)
+RDMcorrNovel = np.zeros(nTime)
+RDMpNovel = np.zeros(nTime)
 
 import pandas as pd
 # calculate partial correlation between neural RDM and stiRDM, adaptRDM
@@ -98,30 +114,39 @@ for tp in range(nTime):
     datatmp = neuralRDM[tp,:] # subIndex,t,re,foldIndex,RDMindex 
     RDMtmp = np.average(neuralRDM[tp,:,:,:], axis=(0, 1))
     
-    pdData = pd.DataFrame({'neuralRDM':RDMtmp,'stimRDM':stimRDM,'adaptRDM':adaptRDM})
+    pdData = pd.DataFrame({'neuralRDM':RDMtmp,'stimRDM':stimRDM,'novelRDM':novelRDM,'adaptRDM':adaptRDM})
 
-    corr=pg.partial_corr(pdData,x='neuralRDM',y='stimRDM',x_covar=['adaptRDM'],tail='two-sided',method='spearman') 
+    corr=pg.partial_corr(pdData,x='neuralRDM',y='stimRDM',x_covar=['novelRDM','adaptRDM'],tail='two-sided',method='spearman') 
     RDMcorrStim[tp] = corr['r']
     RDMpStim[tp] = corr['p-val']
 
-    corr=pg.partial_corr(pdData,x='neuralRDM',y='adaptRDM',x_covar=['stimRDM'],tail='two-sided',method='spearman') 
+    corr=pg.partial_corr(pdData,x='neuralRDM',y='novelRDM',x_covar=['stimRDM','adaptRDM'],tail='two-sided',method='spearman') 
+    RDMcorrNovel[tp] = corr['r']
+    RDMpNovel[tp] = corr['p-val']
+    
+    corr=pg.partial_corr(pdData,x='neuralRDM',y='adaptRDM',x_covar=['stimRDM','novelRDM'],tail='two-sided',method='spearman') 
     RDMcorrAdapt[tp] = corr['r']
     RDMpAdapt[tp] = corr['p-val']
 
 # plot time coure decoding results        
 import matplotlib.pyplot as plt
+fig = plt.figure(figsize=(8, 6), dpi=300) #调用figure创建一个绘图对象
 plt.plot(range(-20,nTime-20),RDMcorrStim,label='Stimuli type',color='brown')
-plt.plot(range(-20,nTime-20),RDMcorrAdapt,label='Novel Level',color='mediumblue')
+plt.plot(range(-20,nTime-20),RDMcorrNovel,label='Novel Level',color='mediumblue')
+plt.plot(range(-20,nTime-20),RDMcorrAdapt,label='Adapt Level',color='forestgreen')
 
+threshold = 0.01
 # plot significant p value 
-RDMpStim[(RDMpStim>0.05)] = None
-RDMpStim[(RDMpStim<=0.05)] = -0.6
-RDMpAdapt[(RDMpAdapt>0.05)] = None
-RDMpAdapt[(RDMpAdapt<=0.05)] = -0.63
+RDMpStim[(RDMpStim>threshold)] = None
+RDMpStim[(RDMpStim<=threshold)] = -0.68
+RDMpNovel[(RDMpNovel>threshold)] = None
+RDMpNovel[(RDMpNovel<=threshold)] = -0.71
+RDMpAdapt[(RDMpAdapt>threshold)] = None
+RDMpAdapt[(RDMpAdapt<=threshold)] = -0.74
 
 plt.plot(range(-20,nTime-20),RDMpStim,color='brown')
-plt.plot(range(-20,nTime-20),RDMpAdapt,color='mediumblue')
-
+plt.plot(range(-20,nTime-20),RDMpNovel,color='mediumblue')
+plt.plot(range(-20,nTime-20),RDMpAdapt,color='forestgreen')# 'forestgreen'
 plt.xlabel('Time points(10ms)')
 plt.ylabel('Partial spearman correlation')
 # 'Time course of partial Spearman correlations between MEG RDMs and model RDMs(pvalue)'
